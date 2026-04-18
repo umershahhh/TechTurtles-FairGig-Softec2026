@@ -1,0 +1,76 @@
+#!/bin/bash
+# Usage: ./scripts/setup-env.sh SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_KEY JWT_SECRET
+
+SUPABASE_URL=$1
+SUPABASE_ANON_KEY=$2
+SUPABASE_SERVICE_KEY=$3
+JWT_SECRET=${4:-"change-me-to-a-long-random-secret-string-32chars"}
+
+if [ -z "$SUPABASE_URL" ]; then
+  echo "Usage: ./scripts/setup-env.sh <SUPABASE_URL> <SUPABASE_ANON_KEY> <SUPABASE_SERVICE_KEY> [JWT_SECRET]"
+  exit 1
+fi
+
+echo "Creating .env files..."
+
+# Auth Service
+cat > auth-service/.env <<EOF
+SUPABASE_URL=$SUPABASE_URL
+SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+JWT_SECRET=$JWT_SECRET
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=30
+PORT=8001
+EOF
+
+# Earnings Service
+cat > earnings-service/.env <<EOF
+SUPABASE_URL=$SUPABASE_URL
+SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+JWT_SECRET=$JWT_SECRET
+JWT_ALGORITHM=HS256
+ANOMALY_SERVICE_URL=http://localhost:8003
+PORT=8002
+EOF
+
+# Anomaly Service
+cat > anomaly-service/.env <<EOF
+SUPABASE_URL=$SUPABASE_URL
+SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+JWT_SECRET=$JWT_SECRET
+JWT_ALGORITHM=HS256
+PORT=8003
+EOF
+
+# Grievance Service
+cat > grievance-service/.env <<EOF
+SUPABASE_URL=$SUPABASE_URL
+SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+JWT_SECRET=$JWT_SECRET
+PORT=8004
+EOF
+
+# Analytics Service
+cat > analytics-service/.env <<EOF
+SUPABASE_URL=$SUPABASE_URL
+SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+JWT_SECRET=$JWT_SECRET
+PORT=8005
+EOF
+
+# Frontend
+cat > frontend/.env <<EOF
+VITE_SUPABASE_URL=$SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+VITE_AUTH_SERVICE_URL=http://localhost:8001
+VITE_EARNINGS_SERVICE_URL=http://localhost:8002
+VITE_ANOMALY_SERVICE_URL=http://localhost:8003
+VITE_GRIEVANCE_SERVICE_URL=http://localhost:8004
+VITE_ANALYTICS_SERVICE_URL=http://localhost:8005
+EOF
+
+echo "✅ All .env files created!"
+echo ""
+echo "Next: start each service in a separate terminal tab."
+echo "See TASK.md for the exact commands."
