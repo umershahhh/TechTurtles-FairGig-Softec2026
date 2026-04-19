@@ -12,7 +12,10 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173"] }));
+app.use(cors({
+  origin: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+  credentials: true,
+}));
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -67,10 +70,10 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ detail: "Missing token" });
   }
   try {
-    req.user = jwt.verify(authHeader.slice(7), JWT_SECRET);
+    req.user = jwt.verify(authHeader.slice(7), JWT_SECRET, { algorithms: ["HS256"] });
     next();
-  } catch {
-    return res.status(401).json({ detail: "Invalid token" });
+  } catch (err) {
+    return res.status(401).json({ detail: "Invalid token: " + err.message });
   }
 }
 

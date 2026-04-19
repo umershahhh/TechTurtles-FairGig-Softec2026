@@ -12,7 +12,10 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173"] }));
+app.use(cors({
+  origin: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+  credentials: true,
+}));
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -35,10 +38,10 @@ function authMiddleware(req, res, next) {
   const h = req.headers.authorization;
   if (!h || !h.startsWith("Bearer ")) return res.status(401).json({ detail: "Missing token" });
   try {
-    req.user = jwt.verify(h.slice(7), JWT_SECRET);
+    req.user = jwt.verify(h.slice(7), JWT_SECRET, { algorithms: ["HS256"] });
     next();
-  } catch {
-    return res.status(401).json({ detail: "Invalid token" });
+  } catch (err) {
+    return res.status(401).json({ detail: "Invalid token: " + err.message });
   }
 }
 
@@ -333,16 +336,20 @@ app.get("/analytics/worker/:workerId", authMiddleware, async (req, res) => {
       rate: p.gross > 0 ? Math.round((p.deductions / p.gross) * 10000) / 100 : 0,
     }));
 
-    // City median comparison (anonymised)
-    const allShiftsForCity = await supaGet(
-      `shifts?city=eq.${shifts[0]?.city || "Unknown"}&select=net_received`
-    );
-    const cityIncomes = allShiftsForCity.map((s) => s.net_received).sort((a, b) => a - b);
-    const cityMedian = cityIncomes.length
-      ? cityIncomes[Math.floor(cityIncomes.length / 2)]
-      : null;
+    // City median comparison (anonymised) — skip if worker has no city set
+    let cityMedian = null;
+    const workerCity = shifts.find(s => s.city)?.city;
+    if (workerCity) {
+      try {
+        const allShiftsForCity = await supaGet(
+          `shifts?city=eq.${encodeURIComponent(workerCity)}&select=net_received`
+        );
+        const cityIncomes = allShiftsForCity.map((s) => s.net_received || 0).sort((a, b) => a - b);
+        if (cityIncomes.length) cityMedian = cityIncomes[Math.floor(cityIncomes.length / 2)];
+      } catch (_) { /* non-critical, skip */ }
+    }
 
-    res.json({ weekly, monthly, platform_rates, city_median_net: Math.round(cityMedian) });
+    res.json({ weekly, monthly, platform_rates, city_median_net: cityMedian !== null ? Math.round(cityMedian) : null });
   } catch (err) {
     res.status(500).json({ detail: err.message });
   }

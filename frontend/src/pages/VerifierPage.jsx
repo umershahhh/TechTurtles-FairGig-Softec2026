@@ -5,20 +5,16 @@ import { CheckCircle, AlertTriangle, XCircle, Eye, ExternalLink } from 'lucide-r
 const fmt = (n) => Number(n || 0).toLocaleString('en-PK', { maximumFractionDigits: 0 })
 
 export default function VerifierPage() {
-  const [pending, setPending] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [pending,    setPending]    = useState([])
+  const [loading,    setLoading]    = useState(true)
   const [processing, setProcessing] = useState(null)
-  const [selected, setSelected]   = useState(null)
-  const [note, setNote]           = useState('')
+  const [selected,   setSelected]   = useState(null)
+  const [note,       setNote]       = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
-    try {
-      const data = await earningsApi.pendingVerifications()
-      setPending(data)
-    } finally {
-      setLoading(false)
-    }
+    try { const data = await earningsApi.pendingVerifications(); setPending(data) }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -26,156 +22,117 @@ export default function VerifierPage() {
   const verify = async (shiftId, status) => {
     setProcessing(shiftId)
     try {
-      await earningsApi.verifyShift(shiftId, {
-        verification_status: status,
-        verifier_note: note,
-      })
+      await earningsApi.verifyShift(shiftId, { verification_status: status, verifier_note: note })
       setPending(prev => prev.filter(s => s.id !== shiftId))
-      setSelected(null)
-      setNote('')
-    } finally {
-      setProcessing(null)
-    }
+      setSelected(null); setNote('')
+    } finally { setProcessing(null) }
   }
 
+  if (loading) return (
+    <div className="flex items-center justify-center py-24">
+      <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-5">
+      <div className="fade-up">
         <h1 className="page-title">Earnings Verification</h1>
-        <p className="text-ink-muted text-sm mt-0.5">
-          {pending.length} shifts pending review
-        </p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--ink-muted)' }}>{pending.length} shifts pending review</p>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : pending.length === 0 ? (
-        <div className="card text-center py-16">
-          <CheckCircle size={32} className="text-brand-400 mx-auto mb-3" />
-          <p className="font-display font-semibold text-base">All caught up!</p>
-          <p className="text-ink-muted text-sm mt-1">No pending verifications at the moment.</p>
+      {pending.length === 0 ? (
+        <div className="card text-center py-16 fade-in">
+          <CheckCircle size={32} className="text-emerald-400 mx-auto mb-3" />
+          <p className="font-display font-semibold text-base" style={{ color: 'var(--ink)' }}>All caught up!</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--ink-muted)' }}>No pending verifications at the moment.</p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-5">
+        <div className="flex flex-col lg:flex-row gap-5 fade-up-1">
           {/* List */}
-          <div className="space-y-3">
+          <div className="flex-1 space-y-3 min-w-0">
             {pending.map(shift => (
-              <div
-                key={shift.id}
-                onClick={() => { setSelected(shift); setNote('') }}
-                className={`card cursor-pointer transition-all ${
-                  selected?.id === shift.id
-                    ? 'border-brand-500/50 bg-brand-500/5'
-                    : 'hover:border-surface-hover'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-3">
+              <div key={shift.id} onClick={() => { setSelected(shift); setNote('') }}
+                className="card cursor-pointer transition-all"
+                style={{
+                  borderColor: selected?.id === shift.id ? 'rgba(34,197,94,0.5)' : 'var(--border)',
+                  background: selected?.id === shift.id ? 'rgba(34,197,94,0.05)' : 'var(--bg-card)',
+                }}>
+                <div className="flex items-start justify-between mb-3 gap-2">
                   <div>
-                    <p className="font-display font-semibold text-sm">{shift.platform}</p>
-                    <p className="text-ink-faint text-xs font-mono mt-0.5">{shift.shift_date}</p>
+                    <p className="font-display font-semibold text-sm" style={{ color: 'var(--ink)' }}>{shift.platform}</p>
+                    <p className="font-mono text-xs mt-0.5" style={{ color: 'var(--ink-faint)' }}>{shift.shift_date}</p>
                   </div>
                   {shift.screenshot_url && (
                     <a href={shift.screenshot_url} target="_blank" rel="noreferrer"
                       onClick={e => e.stopPropagation()}
-                      className="text-blue hover:text-brand-400 flex items-center gap-1 text-xs">
-                      <ExternalLink size={13} /> Screenshot
+                      className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 flex-shrink-0">
+                      <ExternalLink size={12} /> Screenshot
                     </a>
                   )}
                 </div>
-
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[
-                    { label: 'Gross', value: `PKR ${fmt(shift.gross_earned)}`, color: 'text-ink' },
-                    { label: 'Deductions', value: `PKR ${fmt(shift.platform_deductions)}`, color: 'text-amber' },
-                    { label: 'Net', value: `PKR ${fmt(shift.net_received)}`, color: 'text-brand-400' },
+                    { label: 'Gross', value: `PKR ${fmt(shift.gross_earned)}`, color: 'var(--ink)' },
+                    { label: 'Deductions', value: `PKR ${fmt(shift.platform_deductions)}`, color: '#fbbf24' },
+                    { label: 'Net', value: `PKR ${fmt(shift.net_received)}`, color: '#4ade80' },
                   ].map(k => (
-                    <div key={k.label} className="bg-surface rounded-lg p-2">
+                    <div key={k.label} className="rounded-lg p-2" style={{ background: 'var(--bg-elevated)' }}>
                       <p className="section-label mb-1">{k.label}</p>
-                      <p className={`text-xs font-semibold ${k.color}`}>{k.value}</p>
+                      <p className="text-xs font-semibold" style={{ color: k.color }}>{k.value}</p>
                     </div>
                   ))}
                 </div>
-
-                {shift.notes && (
-                  <p className="text-xs text-ink-faint mt-2 italic">"{shift.notes}"</p>
-                )}
+                {shift.notes && <p className="text-xs italic mt-2" style={{ color: 'var(--ink-faint)' }}>"{shift.notes}"</p>}
               </div>
             ))}
           </div>
 
-          {/* Review panel */}
-          <div className="sticky top-0">
-            {selected ? (
-              <div className="card space-y-4">
-                <p className="section-label">Review Decision</p>
-                <div className="bg-surface rounded-lg p-4 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-ink-faint">Platform</span>
-                    <span className="font-medium">{selected.platform}</span>
+          {/* Review panel — sticks on desktop, shows below on mobile */}
+          <div className="w-full lg:w-72 lg:flex-shrink-0">
+            <div className="lg:sticky lg:top-4">
+              {selected ? (
+                <div className="card space-y-4">
+                  <p className="section-label">Review Decision</p>
+                  <div className="rounded-xl p-3 space-y-2 text-sm" style={{ background: 'var(--bg-elevated)' }}>
+                    {[
+                      { label: 'Platform', value: selected.platform },
+                      { label: 'Date', value: selected.shift_date },
+                      { label: 'Commission', value: selected.gross_earned > 0 ? `${(selected.platform_deductions / selected.gross_earned * 100).toFixed(1)}%` : '—' },
+                      ...(selected.city ? [{ label: 'City', value: selected.city }] : []),
+                    ].map(r => (
+                      <div key={r.label} className="flex justify-between">
+                        <span style={{ color: 'var(--ink-faint)' }}>{r.label}</span>
+                        <span className="font-medium" style={{ color: 'var(--ink)' }}>{r.value}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-ink-faint">Date</span>
-                    <span className="font-mono text-xs">{selected.shift_date}</span>
+                  <div>
+                    <label className="section-label block mb-1.5">Verifier Note (optional)</label>
+                    <textarea value={note} onChange={e => setNote(e.target.value)}
+                      placeholder="Add a note..." rows={3} className="resize-none" />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-ink-faint">Commission rate</span>
-                    <span className="text-amber">
-                      {selected.gross_earned > 0
-                        ? `${(selected.platform_deductions / selected.gross_earned * 100).toFixed(1)}%`
-                        : '—'}
-                    </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { status: 'verified',      label: 'Verify', Icon: CheckCircle, color: '#4ade80', bg: 'rgba(34,197,94,0.1)',  border: 'rgba(34,197,94,0.3)'  },
+                      { status: 'flagged',        label: 'Flag',   Icon: AlertTriangle, color: '#fbbf24', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)' },
+                      { status: 'unverifiable',   label: 'N/A',    Icon: XCircle, color: 'var(--ink-faint)', bg: 'var(--bg-elevated)', border: 'var(--border)' },
+                    ].map(a => (
+                      <button key={a.status} onClick={() => verify(selected.id, a.status)} disabled={!!processing}
+                        className="flex items-center justify-center gap-1 rounded-xl py-2.5 text-xs font-semibold transition-all disabled:opacity-50"
+                        style={{ background: a.bg, color: a.color, border: `1px solid ${a.border}` }}>
+                        <a.Icon size={13} /> {a.label}
+                      </button>
+                    ))}
                   </div>
-                  {selected.city && (
-                    <div className="flex justify-between">
-                      <span className="text-ink-faint">City</span>
-                      <span>{selected.city}</span>
-                    </div>
-                  )}
                 </div>
-
-                <div>
-                  <label className="section-label block mb-1.5">Verifier Note (optional)</label>
-                  <textarea
-                    value={note}
-                    onChange={e => setNote(e.target.value)}
-                    placeholder="Add a note about this verification..."
-                    rows={3}
-                    className="resize-none"
-                  />
+              ) : (
+                <div className="card text-center py-10 border-dashed">
+                  <Eye size={22} className="mx-auto mb-2" style={{ color: 'var(--ink-faint)' }} />
+                  <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Select a shift to review</p>
                 </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => verify(selected.id, 'verified')}
-                    disabled={!!processing}
-                    className="flex items-center justify-center gap-1.5 bg-brand-500/10 text-brand-400 border border-brand-500/30 rounded-lg py-2.5 text-sm font-medium hover:bg-brand-500/20 transition-all disabled:opacity-50"
-                  >
-                    <CheckCircle size={14} /> Verify
-                  </button>
-                  <button
-                    onClick={() => verify(selected.id, 'flagged')}
-                    disabled={!!processing}
-                    className="flex items-center justify-center gap-1.5 bg-amber/10 text-amber border border-amber/30 rounded-lg py-2.5 text-sm font-medium hover:bg-amber/20 transition-all disabled:opacity-50"
-                  >
-                    <AlertTriangle size={14} /> Flag
-                  </button>
-                  <button
-                    onClick={() => verify(selected.id, 'unverifiable')}
-                    disabled={!!processing}
-                    className="flex items-center justify-center gap-1.5 bg-surface text-ink-faint border border-surface-border rounded-lg py-2.5 text-sm font-medium hover:bg-surface-hover transition-all disabled:opacity-50"
-                  >
-                    <XCircle size={14} /> N/A
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="card text-center py-12 border-dashed">
-                <Eye size={24} className="text-ink-faint mx-auto mb-2" />
-                <p className="text-ink-faint text-sm">Select a shift to review</p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
